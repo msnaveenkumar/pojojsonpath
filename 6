@@ -1,0 +1,111 @@
+Subject: Recommended Approach for Handling Complex JSON in Test Automation
+
+Hi Team,
+
+When working with complex JSON structures—such as the one in sdhcomplexjson.json—it's important to choose the right strategy between using POJOs (Plain Old Java Objects) and JsonPath, based on the nature of the task.
+
+Given that this JSON includes:
+
+Multi-level nesting (e.g., datasets → datasetElements → reportAttributes → catalogId)
+
+Arrays and nested objects
+
+Repeatable structures requiring targeted automation updates
+
+➡️ JsonPath is generally the more efficient and flexible solution, especially in automation testing scenarios. However, POJOs can still be useful for structured mapping in stable environments.
+
+✅ JsonPath – Recommended for Automation
+Example: One-liner Updates
+
+java
+Copy
+Edit
+ctx.set("$.datasets[0].upstreamDatasets[0].name", "DS_1503_940");
+ctx.set("$.datasets[0].upstreamDatasets[0].producerEonId", 940);
+Reusable Utility:
+
+java
+Copy
+Edit
+public class JsonPathUpdater {
+    public static String updateJson(String filePath, Map<String, Object> updates) throws Exception {
+        String json = Files.readString(Paths.get(filePath));
+        DocumentContext context = JsonPath.parse(json);
+        updates.forEach(context::set);
+        return context.jsonString();
+    }
+
+    public static boolean verifyValue(String json, String path, Object expectedValue) {
+        return expectedValue.equals(JsonPath.read(json, path));
+    }
+}
+Usage Example:
+
+java
+Copy
+Edit
+Map<String, Object> updates = Map.of(
+    "$.datasets[0].upstreamDatasets[0].name", "DS_1503_940",
+    "$.datasets[0].upstreamDatasets[0].producerEonId", 940
+);
+String updatedJson = JsonPathUpdater.updateJson("sdhcomplexjson.json", updates);
+System.out.println(JsonPathUpdater.verifyValue(updatedJson, "$.datasets[0].upstreamDatasets[0].name", "DS_1503_940")
+    ? "✅ Verification Passed" : "❌ Verification Failed");
+Pros of JsonPath:
+
+🎯 Target nested fields with precision
+
+⚡ Rapid test data injection
+
+❌ Detect missing/deleted nodes easily (ideal for negative testing)
+
+🧪 Great for dynamic schema and test response validation
+
+🧱 POJO – For Full Object Mapping
+Workflow:
+
+Define deeply nested classes (e.g., Root, Dataset, UpstreamDataset, etc.)
+
+Use Jackson for deserialization, updates, and re-serialization.
+
+java
+Copy
+Edit
+Root root = mapper.readValue(new File("sdhcomplexjson.json"), Root.class);
+Best for:
+
+Applications using a fixed schema
+
+Structured model development for code reuse
+
+Limitations:
+
+⛔ High setup overhead for deeply nested JSON
+
+👎 Poor at handling missing fields (e.g., node deletions are silently ignored)
+
+🔍 JsonPath vs POJO – Summary Table
+Criteria	POJO	JsonPath
+Setup Time	❌ High	✅ Minimal
+Update Specific Fields	❌ Verbose	✅ One-liner
+Schema Flexibility	❌ Rigid	✅ Dynamic
+Validation Support	❌ Full mapping required	✅ Targeted via paths
+Negative Testing	❌ Not ideal	✅ Excellent (missing nodes)
+Suitable for Attached JSON	❌ Too complex	✅ Ideal
+
+📌 Conclusion
+For our use case involving dynamic, deeply nested JSON, JsonPath offers:
+
+Faster and cleaner test setup
+
+Minimal boilerplate
+
+Excellent support for both positive and negative testing
+
+👉 Recommendation: Use JsonPath for test automation tasks. Reserve POJO mapping for application-level logic or where schema stability is guaranteed.
+
+Let me know if you'd like a working code snippet or integration with existing test suites.
+
+Best regards,
+[Your Name]
+QA Automation Team
